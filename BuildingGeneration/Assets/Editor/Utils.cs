@@ -27,13 +27,36 @@ public class Utils {
     public static int WeightedRandomIndex(double[] cdf)
     {
         double val = rng.NextDouble();
-        int low = 0;
-        int high = cdf.Length - 1;
 
-        for (int i = 0; i < cdf.Length; i++)
+        return FindLargerIndex(cdf, val);
+    }
+
+    /// <summary>
+    /// Finds an index in the sorted array such that arr[i-1] < val <= arr[i]
+    /// </summary>
+    /// <param name="arr">The sorted array to search through</param>
+    /// <param name="val">The value to find the location of</param>
+    /// <returns>The index that represents the first value in the array greater than val</returns>
+    /// <remarks>If the value is larger than the last element in the array this will return length - 1</remarks>
+    public static int FindLargerIndex(double[] arr, double val)
+    {
+        int low = 0;
+        int high = arr.Length - 1;
+
+        if (val < arr[0])
+        {
+            return 0;
+        }
+
+        if (val >= arr[arr.Length-1])
+        {
+            return arr.Length - 1;
+        }
+
+        for (int i = 0; i < arr.Length; i++)
         {
             int mid = (low + high) / 2;
-            if (cdf[mid] < val)
+            if (arr[mid] < val)
             {
                 low = mid;
             }
