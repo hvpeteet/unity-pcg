@@ -236,6 +236,11 @@ public class Blueprint {
             {
                 GameObject cube_collider_container = new GameObject();
                 cube_collider_container.AddComponent<BoxCollider>();
+
+                // Downsize the collider
+                BoxCollider c = cube_collider_container.GetComponent<BoxCollider>();
+                c.size = new Vector3(0.99f, 0.99f, 0.99f);
+
                 cube_collider_container.transform.parent = complete_block.transform;
                 cube_collider_container.transform.SetPositionAndRotation(
                     disassembled_block[i].transform.position, 
