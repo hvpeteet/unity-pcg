@@ -159,15 +159,11 @@ public class Blueprint {
 
     public GameObject Instantiate()
     {
+        // Keep track of all the cubes we instantiate
+        Dictionary<int, List<GameObject>> block_pieces = new Dictionary<int, List<GameObject>>();
+
+        // Assign materials to block numbers
         System.Random rng = new System.Random();
-        int[] my_dims = this.GetDimsArr();
-        GameObject base_cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        base_cube.AddComponent(typeof(Rigidbody));
-
-        Dictionary<int, GameObject> subdesign_core_objs = new Dictionary<int, GameObject>();
-
-        List<GameObject> physical_blocks = new List<GameObject>();
-        // populate the materials list
         List<Material> materials = new List<Material>();
         string[] material_asset_guids = UnityEditor.AssetDatabase.FindAssets("t:material", new string[] { "Assets/Prefabs/Ruins/Materials" });
         for (int i = 0; i < this.next_subdesign_id; i++)
@@ -176,44 +172,91 @@ public class Blueprint {
             Material material = (Material)UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(UnityEditor.AssetDatabase.GUIDToAssetPath(chosen_material_guid));
             materials.Add(material);
         }
-        for (int i = 0; i < my_dims[0]; i++)
+
+        // Create a basic cube that we can duplicate
+        GameObject template_cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+
+        // Create all the blocks
+        for (int i = 0; i < this.dims.x; i++)
         {
-            for (int j = 0; j < my_dims[1]; j++)
+            for (int j = 0; j < this.dims.y; j++)
             {
-                for (int k = 0; k < my_dims[2]; k++)
+                for (int k = 0; k < this.dims.z; k++)
                 {
-                    int subdesign = this.blocks[i, j, k];
-                    if (subdesign != 0)
+                    int block_number = this.blocks[i, j, k];
+                    if (block_number > 0)
                     {
-                        GameObject obj = Object.Instantiate(
-                            base_cube,
-                            new Vector3(i + 0.5f, j + 0.5f, k),
-                            new Quaternion());
-                        physical_blocks.Add(obj);
-                        
-                        obj.GetComponent<Renderer>().material = materials[subdesign];
-                        if (!subdesign_core_objs.ContainsKey(subdesign))
+                        GameObject block_piece = Object.Instantiate(
+                                template_cube,
+                                new Vector3(i + 0.5f, j + 0.5f, k),
+                                new Quaternion());
+                        if (!block_pieces.ContainsKey(block_number))
                         {
-                            subdesign_core_objs.Add(subdesign, obj);
+                            block_pieces.Add(block_number, new List<GameObject>());
                         }
-                        else
-                        {
-                            FixedJoint joint = subdesign_core_objs[subdesign].AddComponent<FixedJoint>();
-                            joint.connectedBody = obj.GetComponent<Rigidbody>();
-                        }
+                        block_pieces[block_number].Add(block_piece);
                     }
                 }
             }
         }
-        Object.DestroyImmediate(base_cube);
 
-        GameObject container = new GameObject();
-        foreach (GameObject g in physical_blocks)
+        // An empty container to house the final collection of blocks
+        GameObject building = new GameObject();
+
+        // Merge all the blocks and color them
+        foreach (KeyValuePair<int, List<GameObject>> item in block_pieces)
         {
-            g.transform.parent = container.transform;
+            List<GameObject> disassembled_block = item.Value;
+            int block_number = item.Key;
+            CombineInstance[] mesh_pieces = new CombineInstance[disassembled_block.Count];
+
+            // Populate the mesh_pieces (CombineInstance[]) from dissasembled_block (List<GameObject>)
+            for (int i = 0; i < disassembled_block.Count; i++)
+            {
+                GameObject piece = disassembled_block[i];
+
+                mesh_pieces[i].subMeshIndex = 0;
+                mesh_pieces[i].mesh = piece.GetComponent<MeshFilter>().sharedMesh;
+                mesh_pieces[i].transform = piece.GetComponent<Transform>().localToWorldMatrix;
+            }
+            GameObject complete_block = new GameObject();
+
+            // Combine the meshes and add it to the game object
+            complete_block.AddComponent<MeshFilter>();
+            Mesh final_mesh = new Mesh();
+            final_mesh.CombineMeshes(mesh_pieces);
+            complete_block.GetComponent<MeshFilter>().sharedMesh = final_mesh;
+
+            // Add rendering information
+            complete_block.AddComponent<MeshRenderer>();
+            complete_block.GetComponent<Renderer>().material = materials[block_number];
+
+            // Add a composite collider
+            for (int i = 0; i < disassembled_block.Count; i++)
+            {
+                GameObject cube_collider_container = new GameObject();
+                cube_collider_container.AddComponent<BoxCollider>();
+                cube_collider_container.transform.parent = complete_block.transform;
+                cube_collider_container.transform.SetPositionAndRotation(
+                    disassembled_block[i].transform.position, 
+                    disassembled_block[i].transform.rotation);
+            }
+
+            // Add a rigidbody
+            complete_block.AddComponent<Rigidbody>();
+
+            // Add the complete block to the building
+            complete_block.transform.parent = building.transform;
+
+            // Destroy the old blocks
+            foreach (GameObject g in disassembled_block)
+            {
+                Object.DestroyImmediate(g);
+            }
         }
 
-        return container;
+        Object.DestroyImmediate(template_cube);
+        return building;
     }
 
     public Blueprint Randomize()

@@ -56,7 +56,7 @@ public class CreateRuinsWizard : ScriptableWizard
         };
         GameObject obj = gen.GenerateRuin().Instantiate();
         PrefabUtility.CreatePrefab(ruinPath, obj);
-        DestroyImmediate(obj);
+        // DestroyImmediate(obj);
         EditorUtility.ClearProgressBar();
     }
 }
