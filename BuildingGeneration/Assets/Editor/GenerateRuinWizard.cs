@@ -38,7 +38,7 @@ public class CreateRuinsWizard : ScriptableWizard
         {
             AssetDatabase.CreateFolder("Assets/Prefabs", "Ruins");
         }
-        string ruinPath = System.IO.Path.Combine("Assets/Prefabs/Ruins/", nickname + ".prefab");
+        string ruinPath = "Assets/Prefabs/Ruins/" + nickname + ".prefab";
 
         // Warning dialog if file exists.
         Debug.Log(AssetDatabase.FindAssets(ruinPath));
