@@ -29,7 +29,6 @@ public class UtilsTest {
                 return 1;
             }
         }
-
     }
 
     [Test]

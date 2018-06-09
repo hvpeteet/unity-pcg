@@ -38,7 +38,7 @@ public class CreateRuinsWizard : ScriptableWizard
         {
             AssetDatabase.CreateFolder("Assets/Prefabs", "Ruins");
         }
-        string ruinPath = "Assets/Prefabs/Ruins/" + nickname + ".prefab";
+        string ruinPath = System.IO.Path.Combine("Assets/Prefabs/Ruins/", nickname + ".prefab");
 
         // Warning dialog if file exists.
         Debug.Log(AssetDatabase.FindAssets(ruinPath));
@@ -54,9 +54,8 @@ public class CreateRuinsWizard : ScriptableWizard
             pop_size = pop_size,
             on_status_update = OnStatusUpdate
         };
-        GameObject obj = gen.GenerateRuin().Instantiate();
-        PrefabUtility.CreatePrefab(ruinPath, obj);
-        // DestroyImmediate(obj);
+        Blueprint blueprint = gen.GenerateRuin();
+        blueprint.SaveAsPrefab("Assets/Prefabs/Ruins", nickname);
         EditorUtility.ClearProgressBar();
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using UnityEditor;
 
 public class Discrete3DCoord
 {
@@ -157,6 +158,54 @@ public class Blueprint {
 
     // -------------- Genetic functions --------------
 
+    /// <summary>
+    /// Save this blueprint as a prefab inside the specified directory
+    /// This will save the prefab as target_directory/building_name.preab
+    /// and will save each block's mesh under target_directory/building_name_dependencies/block_id
+    /// </summary>
+    /// <param name="target_directory">The directory to save the preab in</param>
+    /// <param name="building_name">The name to give the prefab</param>
+    /// <remarks>This assumes that the directory already exists</remarks>
+    public void SaveAsPrefab(string target_directory, string building_name)
+    {
+        if (!AssetDatabase.IsValidFolder(target_directory))
+        {
+            // TODO: raise exception or create the directory
+        }
+
+        string deps_path = target_directory + "/" + building_name + "_dependencies";
+        if (AssetDatabase.IsValidFolder(deps_path))
+        {
+            FileUtil.DeleteFileOrDirectory(deps_path);
+        }
+        AssetDatabase.CreateFolder(target_directory, building_name + "_dependencies");
+
+        // Create the dependencies directory
+        string dependencies_path = string.Format("{0}/{1}_dependencies", target_directory, building_name);
+        if (!AssetDatabase.IsValidFolder(dependencies_path))
+        {
+            AssetDatabase.CreateFolder(target_directory, building_name + "_dependencies");
+        }
+
+        GameObject building = this.Instantiate();
+
+        // Save each bock's mesh as an asset
+        for (int i = 0; i < building.transform.childCount; i++)
+        {
+            string save_location = string.Format("{0}/block_{1}.asset", dependencies_path, i);
+            GameObject block = building.transform.GetChild(i).gameObject;
+            Mesh to_save = block.GetComponent<MeshFilter>().sharedMesh;
+            AssetDatabase.CreateAsset(to_save, save_location);
+            AssetDatabase.SaveAssets();
+            // Replace each block's mesh with the new asset
+            block.GetComponent<MeshFilter>().sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(save_location);
+        }
+
+        // Save the building as a prefab
+        PrefabUtility.CreatePrefab(target_directory + "/" + building_name + ".prefab", building);
+        Object.DestroyImmediate(building);
+    }
+
     public GameObject Instantiate()
     {
         // Keep track of all the cubes we instantiate
@@ -237,10 +286,11 @@ public class Blueprint {
                 GameObject cube_collider_container = new GameObject();
                 cube_collider_container.AddComponent<BoxCollider>();
 
-                // Downsize the collider
+                // Shrink the collider so that blocks can slide past eachother if not supported
                 BoxCollider c = cube_collider_container.GetComponent<BoxCollider>();
                 c.size = new Vector3(0.99f, 0.99f, 0.99f);
 
+                // Add the piece of the composite collider to the parent block
                 cube_collider_container.transform.parent = complete_block.transform;
                 cube_collider_container.transform.SetPositionAndRotation(
                     disassembled_block[i].transform.position, 
