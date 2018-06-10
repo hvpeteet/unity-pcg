@@ -6,36 +6,11 @@ using System.Collections;
 
 public class UtilsTest {
 
-    public class doubleComparer : IComparer
-    {
-        private double tolerance;
-        public doubleComparer(double tolerance)
-        {
-            this.tolerance = tolerance;
-        }
-
-        // Calls CaseInsensitiveComparer.Compare with the parameters reversed.
-        int IComparer.Compare(System.Object x, System.Object y)
-        {
-            double diff = (double)x - (double)y;
-            if (diff < tolerance)
-            {
-                return 0;
-            } else if (diff < 0)
-            {
-                return -1;
-            } else
-            {
-                return 1;
-            }
-        }
-    }
-
     [Test]
 	public void TestCalcCDFSimple() {
         // Use the Assert class to test conditions.
         double[] cdf = Utils.CalcCDF(new int[] { 1, 3, 1, 5});
-        CollectionAssert.AreEqual(new double[] { 0.1, 0.4, 0.5, 1.0 }, cdf, new doubleComparer(0.0001));
+        CollectionAssert.AreEqual(new double[] { 0.1, 0.4, 0.5, 1.0 }, cdf, new TestUtils.DoubleComparer(0.0001));
 	}
 
     [Test]
@@ -43,7 +18,7 @@ public class UtilsTest {
     {
         // Use the Assert class to test conditions.
         double[] cdf = Utils.CalcCDF(new int[] { 0, 0, 0, 0, 0});
-        CollectionAssert.AreEqual(new double[] { 0.2, 0.4, 0.6, 0.8, 1.0 }, cdf, new doubleComparer(0.0001));
+        CollectionAssert.AreEqual(new double[] { 0.2, 0.4, 0.6, 0.8, 1.0 }, cdf, new TestUtils.DoubleComparer(0.0001));
     }
 
     [Test]
@@ -75,7 +50,7 @@ public class UtilsTest {
         {
             dist[i] = ((double)total[i]) / iters;
         }
-        CollectionAssert.AreEqual(pdf, dist, new doubleComparer(0.01));
+        CollectionAssert.AreEqual(pdf, dist, new TestUtils.DoubleComparer(0.01));
     }
 
     [Test]

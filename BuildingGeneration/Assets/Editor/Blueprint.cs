@@ -57,6 +57,10 @@ public class Blueprint {
     // -------------- Basic Methods --------------
     public Blueprint(int dim_x, int dim_y, int dim_z)
     {
+        if (dim_x < 0 || dim_y < 0 || dim_z < 0)
+        {
+            throw new System.ArgumentException("dimensions must be non-negative");
+        }
         blocks = new int[dim_x, dim_y, dim_z];
         this.dims = new Discrete3DCoord(dim_x, dim_y, dim_z);
         for (int x = 0; x < dim_x; x++)
@@ -113,7 +117,7 @@ public class Blueprint {
         // Check that the dimensions are the same
         if (!target.GetDimsArr().SequenceEqual(my_dims))
         {
-            Debug.Log(string.Format(
+            throw new System.ArgumentException(string.Format(
                 "Blueprint dimensions must be exactly the same, were {0} (source) and {1} (target)",
                 this.GetDimsString(),
                 target.GetDimsString()));
@@ -131,12 +135,22 @@ public class Blueprint {
         design_notebook.Add(new_design);
     }
 
+
+    /// <summary>
+    /// Performs normal modulus since in C# -1 % 4 == -1 instead of 3
+    /// </summary>
+    private int pos_mod(int n, int m)
+    {
+        return ((n % m) + m) % m;
+    }
+
     public Blueprint Rotate(RotationAxis axis, int rotation_magnitude)
     {
         int[] my_dims = this.GetDimsArr();
         Blueprint rotated = new Blueprint(my_dims[0], my_dims[1], my_dims[2]);
         this.CopyInto(rotated);
-        for (int i = 0; i < rotation_magnitude % 4; i++)
+
+        for (int i = 0; i < pos_mod(rotation_magnitude, 4); i++)
         {
             rotated._Rotate(axis);
         }
