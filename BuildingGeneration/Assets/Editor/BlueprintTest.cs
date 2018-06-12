@@ -2,7 +2,7 @@
 using UnityEditor;
 using UnityEngine.TestTools;
 using NUnit.Framework;
-using System.Collections;
+using System.Collections.Generic;
 
 public class BlueprintTest
 {
@@ -114,6 +114,106 @@ public class BlueprintTest
     }
 
     [Test]
+    public void TestIsStable()
+    {
+        Blueprint stable = new Blueprint(3, 3, 3);
+        Assert.IsTrue(stable.IsStable());
+        stable.AddBlock(new Discrete3DCoord(0, 0, 0), 1);
+        Assert.IsTrue(stable.IsStable());
+        stable.AddBlock(new Discrete3DCoord(0, 1, 0), 1);
+        stable.AddBlock(new Discrete3DCoord(2, 0, 0), 2);
+        stable.AddBlock(new Discrete3DCoord(2, 1, 0), 2);
+        Assert.IsTrue(stable.IsStable());
+        stable.AddBlock(new Discrete3DCoord(0, 2, 0), 3);
+        stable.AddBlock(new Discrete3DCoord(1, 2, 0), 3);
+        stable.AddBlock(new Discrete3DCoord(2, 2, 0), 3);
+        Assert.IsTrue(stable.IsStable());
+        Blueprint unstable = new Blueprint(3, 3, 3);
+        unstable.AddBlock(new Discrete3DCoord(1, 1, 1), 1);
+        Assert.IsFalse(unstable.IsStable());
+    }
+
+    [Test]
+    public void TestDeleteID()
+    {
+        Blueprint empty = new Blueprint(4, 4, 4);
+        Blueprint arch = new Blueprint(4, 4, 4);
+
+        CollectionAssert.AreEqual(empty.GetBlocks(), arch.GetBlocks());
+
+        arch.AddBlock(new Discrete3DCoord(0, 0, 0), 1);
+        arch.AddBlock(new Discrete3DCoord(0, 1, 0), 1);
+        arch.AddBlock(new Discrete3DCoord(0, 2, 0), 1);
+
+        arch.AddBlock(new Discrete3DCoord(2, 0, 0), 1);
+        arch.AddBlock(new Discrete3DCoord(2, 1, 0), 1);
+        arch.AddBlock(new Discrete3DCoord(2, 2, 0), 1);
+
+        arch.AddBlock(new Discrete3DCoord(0, 3, 0), 1);
+        arch.AddBlock(new Discrete3DCoord(1, 3, 0), 1);
+        arch.AddBlock(new Discrete3DCoord(2, 3, 0), 1);
+
+        CollectionAssert.AreNotEqual(empty.GetBlocks(), arch.GetBlocks());
+
+        arch.DeleteID(1);
+        CollectionAssert.AreEqual(empty.GetBlocks(), arch.GetBlocks());
+    }
+
+    [Test]
+    public void TestApplyDesign()
+    {
+        Blueprint composite = new Blueprint(4, 5, 4);
+
+        Blueprint long_block = new Blueprint(4, 1, 1);
+        long_block.AddBlock(new Discrete3DCoord(0, 0, 0), 1);
+        long_block.AddBlock(new Discrete3DCoord(1, 0, 0), 1);
+        long_block.AddBlock(new Discrete3DCoord(2, 0, 0), 1);
+        long_block.AddBlock(new Discrete3DCoord(3, 0, 0), 1);
+
+        Blueprint tall_block = new Blueprint(2, 3, 1);
+        tall_block.AddBlock(new Discrete3DCoord(0, 0, 0), 1);
+        tall_block.AddBlock(new Discrete3DCoord(0, 1, 0), 1);
+        tall_block.AddBlock(new Discrete3DCoord(0, 2, 0), 1);
+
+        Blueprint really_really_long_block = new Blueprint(10, 1, 1);
+        really_really_long_block.AddBlock(new Discrete3DCoord(0, 0, 0), 1);
+        really_really_long_block.AddBlock(new Discrete3DCoord(1, 0, 0), 1);
+        really_really_long_block.AddBlock(new Discrete3DCoord(2, 0, 0), 1);
+        really_really_long_block.AddBlock(new Discrete3DCoord(3, 0, 0), 1);
+        really_really_long_block.AddBlock(new Discrete3DCoord(4, 0, 0), 1);
+        really_really_long_block.AddBlock(new Discrete3DCoord(5, 0, 0), 1);
+        really_really_long_block.AddBlock(new Discrete3DCoord(6, 0, 0), 1);
+        really_really_long_block.AddBlock(new Discrete3DCoord(7, 0, 0), 1);
+        really_really_long_block.AddBlock(new Discrete3DCoord(8, 0, 0), 1);
+        really_really_long_block.AddBlock(new Discrete3DCoord(9, 0, 0), 1);
+
+        composite.ApplyDesign(long_block, 0, 0, 0);
+
+        List<int> unique_ids = new List<int>();
+
+        unique_ids.Add(composite.GetBlocks()[0,0,0]);
+        CollectionAssert.AllItemsAreUnique(unique_ids);
+        CollectionAssert.DoesNotContain(unique_ids, 0);
+
+        composite.ApplyDesign(tall_block, 0, 1, 0);
+        unique_ids.Add(composite.GetBlocks()[0, 1, 0]);
+        CollectionAssert.AllItemsAreUnique(unique_ids);
+        CollectionAssert.DoesNotContain(unique_ids, 0);
+
+        composite.ApplyDesign(tall_block, 3, 1, 0);
+        unique_ids.Add(composite.GetBlocks()[3, 1, 0]);
+        CollectionAssert.AllItemsAreUnique(unique_ids);
+        CollectionAssert.DoesNotContain(unique_ids, 0);
+
+        composite.ApplyDesign(really_really_long_block, 0, 3, 0);
+        unique_ids.Add(composite.GetBlocks()[0, 3, 0]);
+        CollectionAssert.AllItemsAreUnique(unique_ids);
+        CollectionAssert.DoesNotContain(unique_ids, 0);
+
+        Assert.AreEqual(composite.GetBlocks()[0, 3, 0], composite.GetBlocks()[3, 3, 0]);
+    }
+
+    [Test]
     public void TestInstantiate()
     {
 
@@ -127,24 +227,6 @@ public class BlueprintTest
 
     [Test]
     public void TestMutate()
-    {
-
-    }
-
-    [Test]
-    public void TestIsStable()
-    {
-
-    }
-
-    [Test]
-    public void TestDeleteID()
-    {
-
-    }
-
-    [Test]
-    public void TestApplyDesign()
     {
 
     }

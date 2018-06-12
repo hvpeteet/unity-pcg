@@ -372,6 +372,95 @@ public class Blueprint {
         this.Randomize().CopyInto(target);
     }
 
+    public bool IsStable()
+    {
+        GameObject building = this.Instantiate();
+
+        List<Vector3> orig_pos = new List<Vector3>();
+        foreach (Transform obj in building.GetComponentsInChildren<Transform>())
+        {
+            orig_pos.Add(obj.transform.position);
+        }
+        this.SimulatePhysics(10.0f);
+
+        int i = 0;
+        bool stable = true;
+        foreach (Transform obj in building.GetComponentsInChildren<Transform>())
+        {
+            if ((obj.transform.position - orig_pos[i]).magnitude > 0.1f)
+            {
+                stable = false;
+            }
+            i++;
+        }
+        Object.DestroyImmediate(building);
+        return stable;
+    }
+
+    public void DeleteID(int id)
+    {
+        for (int x = 0; x < this.dims.x; x++)
+        {
+            for (int y = 0; y < this.dims.y; y++)
+            {
+                for (int z = 0; z < this.dims.z; z++)
+                {
+                    if (this.blocks[x, y, z] == id)
+                    {
+                        this.blocks[x, y, z] = 0;
+                        // Add an attatchment point if this is on the floor or has a block below it.
+                        if (y == 0 || (this.blocks[x, y - 1, z] != 0 && this.blocks[x, y - 1, z] != id))
+                        {
+                            attatchment_points.Add(new Discrete3DCoord(x, y, z));
+                        }
+                    }
+                }
+            }
+        }
+        this.valid_ids.Remove(id);
+    }
+
+    // Copy over a blueprint at location (x,y,z).
+    // NOTE: If the blueprint would overflow any of the dimensions 
+    //       the operation will truncate the design in order to fit.
+    public void ApplyDesign(Blueprint design, int x_start, int y_start, int z_start)
+    {
+        int subdesign_id = this.next_subdesign_id;
+        next_subdesign_id += design.next_subdesign_id;
+        int[] my_dims = this.GetDimsArr();
+        int[] other_dims = design.GetDimsArr();
+        int[] copy_dims = {
+            Mathf.Min(my_dims[0] - x_start, other_dims[0]),
+            Mathf.Min(my_dims[1] - y_start, other_dims[1]),
+            Mathf.Min(my_dims[2] - z_start, other_dims[2])
+        };
+        for (int x = 0; x < copy_dims[0]; x++)
+        {
+            for (int y = 0; y < copy_dims[1]; y++)
+            {
+                for (int z = 0; z < copy_dims[2]; z++)
+                {
+                    if (design.blocks[x, y, z] > 0)
+                    {
+                        int this_x = x + x_start;
+                        int this_y = y + y_start;
+                        int this_z = z + z_start;
+                        this.blocks[this_x, this_y, this_z] = subdesign_id + design.blocks[x, y, z];
+                        if (this_y + 1 < this.dims.y && this.blocks[this_x, this_y + 1, this_z] == 0)
+                        {
+                            attatchment_points.Add(new Discrete3DCoord(this_x, this_y + 1, this_z));
+                        }
+                        Discrete3DCoord this_coord = new Discrete3DCoord(this_x, this_y, this_z);
+                        if (attatchment_points.Contains(this_coord))
+                        {
+                            attatchment_points.Remove(this_coord);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // -------------- Private functions --------------
 
     private static List<Blueprint> InitDesignNotebook()
@@ -397,31 +486,6 @@ public class Blueprint {
         notebook.Add(brick3);
 
         return notebook;
-    }
-
-    private bool IsStable()
-    {
-        GameObject building = this.Instantiate();
-
-        List<Vector3> orig_pos = new List<Vector3>();
-        foreach (Transform obj in building.GetComponentsInChildren<Transform>())
-        {
-            orig_pos.Add(obj.transform.position);
-        }
-        this.SimulatePhysics(10.0f);
-
-        int i = 0;
-        bool stable = true;
-        foreach (Transform obj in building.GetComponentsInChildren<Transform>())
-        {
-            if ((obj.transform.position - orig_pos[i]).magnitude > 0.1f)
-            {
-                stable = false;
-            }
-            i++;
-        }
-        Object.DestroyImmediate(building);
-        return stable;
     }
 
     private void SimulatePhysics(float seconds)
@@ -537,70 +601,6 @@ public class Blueprint {
             }
         }
         return false;
-    }
-
-    private void DeleteID(int id)
-    {
-        for (int x = 0; x < this.dims.x; x++)
-        {
-            for (int y = 0; y < this.dims.y; y++)
-            {
-                for (int z = 0; z < this.dims.z; z++)
-                {
-                    if (this.blocks[x, y, z] == id)
-                    {
-                        this.blocks[x, y, z] = 0;
-                        // Add an attatchment point if this is on the floor or has a block below it.
-                        if (y == 0 || (this.blocks[x, y - 1, z] != 0 && this.blocks[x, y - 1, z] != id))
-                        {
-                            attatchment_points.Add(new Discrete3DCoord(x, y, z));
-                        }
-                    }
-                }
-            }
-        }
-        this.valid_ids.Remove(id);
-    }
-
-    // Copy over a blueprint at location (x,y,z).
-    // NOTE: If the blueprint would overflow any of the dimensions 
-    //       the operation will truncate the design in order to fit.
-    private void ApplyDesign(Blueprint design, int x_start, int y_start, int z_start)
-    {
-        int subdesign_id = this.next_subdesign_id;
-        next_subdesign_id += design.next_subdesign_id;
-        int[] my_dims = this.GetDimsArr();
-        int[] other_dims = design.GetDimsArr();
-        int[] copy_dims = {
-            Mathf.Min(my_dims[0] - x_start, other_dims[0]),
-            Mathf.Min(my_dims[1] - y_start, other_dims[1]),
-            Mathf.Min(my_dims[2] - z_start, other_dims[2])
-        };
-        for (int x = 0; x < copy_dims[0]; x++)
-        {
-            for (int y = 0; y < copy_dims[1]; y++)
-            {
-                for (int z = 0; z < copy_dims[2]; z++)
-                {
-                    if (design.blocks[x, y, z] > 0)
-                    {
-                        int this_x = x + x_start;
-                        int this_y = y + y_start;
-                        int this_z = z + z_start;
-                        this.blocks[this_x, this_y, this_z] = subdesign_id + design.blocks[x, y, z];
-                        if (this_y + 1 < this.dims.y && this.blocks[this_x, this_y + 1, this_z] == 0)
-                        {
-                            attatchment_points.Add(new Discrete3DCoord(this_x, this_y + 1, this_z));
-                        }
-                        Discrete3DCoord this_coord = new Discrete3DCoord(this_x, this_y, this_z);
-                        if (attatchment_points.Contains(this_coord))
-                        {
-                            attatchment_points.Remove(this_coord);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private void _ApplyTransformation(TranformationFunc f, Discrete3DCoord new_dims)
